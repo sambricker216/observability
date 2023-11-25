@@ -1,17 +1,28 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
-
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+const tracer = require("./tracing")("todo-service");
+const express = require("express");
+const { MongoClient } = require("mongodb");
+const app = express();
+app.use(express.json());
+const port = 3000;
+let db;
+const startServer = async () => {
+   const client = await MongoClient.connect("mongodb://localhost:27017/");
+   db = client.db("todo");
+   await db.collection("todos").insertMany([
+       { id: "1", title: "Buy groceries" },
+       { id: "2", title: "Install Aspecto" },
+       { id: "3", title: "buy my own name domain" },
+   ]);
+   app.listen(port, () => {
+       console.log(`Example app listening on port ${port}`);
+   });
+};
+startServer();
+app.get("/todo", async (req, res) => {
+   const todos = await db.collection("todos").find({}).toArray();
+   res.send(todos);
+});
+app.get("/todo/:id", async (req, res) => {
+   const todo = await db.collection("todos").findOne({ id: req.params.id });
+   res.send(todo);
+});
